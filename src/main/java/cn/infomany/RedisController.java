@@ -1,11 +1,14 @@
 package cn.infomany;
 
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
 import java.util.Date;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @program: springbootdemo
@@ -23,28 +26,31 @@ public class RedisController {
      */
     private static int EXPIRE_TIME = 60;
 
-    @Resource
-    private RedisUtil redisUtil;
+    @Autowired
+    private RedisTemplate<String, Object> redisTemplate;
 
-    @RequestMapping("/set")
-    public boolean redisSet(String key, String value) {
-        UserEntity userEntity = new UserEntity();
-        userEntity.setId(1L);
-        userEntity.setGuid(String.valueOf(1));
-        userEntity.setName("ZHANGSAN");
-        userEntity.setAge(String.valueOf(20));
-        userEntity.setCreateTime(new Date());
 
-        return redisUtil.set(key, value);
-    }
+    @GetMapping("/login")
+    @ResponseBody
+    public String login(@RequestParam String name, @RequestParam String password) {
+        String key = String.format("username:login:fail:count:%s", name);
+        String count = null;
+        if (redisTemplate.hasKey(key)) {
+            count = redisTemplate.opsForValue().get(key).toString();
+            if (Integer.parseInt(count) >= 5) {
+                Long expire = redisTemplate.getExpire(key, TimeUnit.SECONDS);
+                return "有限制了，一分钟登录失败超过了5次,请(" + expire + ")秒后重试";
+            }
+        }
 
-    @RequestMapping("/get")
-    public Object redisGet(String key) {
-        return redisUtil.get(key);
-    }
+        if (!"zjb".equals(name) || !"123".equals(password)) {
+            count = String.valueOf((count == null ? 0 : Integer.parseInt(count)) + 1);
+            redisTemplate.opsForValue().set(key, count, 2, TimeUnit.MINUTES);
+            return "登录失败，一分钟登录失败次数为" + count;
+        }
 
-    @RequestMapping("/expire")
-    public boolean expire(String key) {
-        return redisUtil.expire(key, EXPIRE_TIME);
+
+        redisTemplate.delete(key);
+        return "登录成功啦";
     }
 }

@@ -1,6 +1,7 @@
 package cn.infomany;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.redis.core.BoundListOperations;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
@@ -91,7 +92,9 @@ public class RedisUtil {
      * @param key 键
      * @return 值
      */
+    @Cacheable(value = "redis_data", key = "'key:'+#key")
     public Object get(String key) {
+        System.out.println("key = " + key);
         return key == null ? null : redisTemplate.opsForValue().get(key);
     }
 

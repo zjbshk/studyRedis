@@ -53,4 +53,13 @@ public class RedisController {
         redisTemplate.delete(key);
         return "登录成功啦";
     }
+
+    @Autowired
+    private RedisUtil redisUtil;
+
+    @GetMapping("/testCache")
+    public String testCache() {
+        String key = "StrTest";
+        return redisUtil.get(key).toString();
+    }
 }
